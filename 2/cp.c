@@ -38,6 +38,7 @@ int openTarget(char *path, char *sourceFilename) {
   if (errno == EEXIST) {
     DIR *dir = opendir(path);
     if (dir != NULL) {
+      closedir(dir);
       // target is folder
       if (sourceFilename != NULL) {
         // append filename
