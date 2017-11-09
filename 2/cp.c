@@ -49,7 +49,7 @@ int openTarget(char *path, char *sourceFilename) {
         if (appendSeperator) {
           newPathLength++;
         }
-        char *newPath = malloc(newPathLength);
+        char newPath[newPathLength];
         strncpy(newPath, path, pathLength);
         if (appendSeperator) {
           newPath[pathLength++] = '/';
@@ -57,7 +57,6 @@ int openTarget(char *path, char *sourceFilename) {
         strncpy(newPath + pathLength, sourceFilename, filenameLength);
         newPath[newPathLength - 1] = '\0';
         fd = openTarget(newPath, NULL);
-        free(newPath);
         return fd;
       }
     } else {
