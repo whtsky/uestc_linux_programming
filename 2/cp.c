@@ -1,15 +1,24 @@
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
-#include <dirent.h>
 
 #define BUFFER_SIZE 1024
 
 int CREATE_MODE = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+
+bool isdir(char *path) {
+  DIR *dir = opendir(path);
+  bool flag = dir != NULL;
+  if (flag) {
+    closedir(dir);
+  }
+  return flag;
+}
 
 char *getFilename(char *path) {
   char *token = strtok(path, "/");
@@ -27,6 +36,10 @@ int openSource(char *path) {
     fprintf(stderr, "Error opening %s: %s", path, strerror(errno));
     exit(EXIT_FAILURE);
   }
+  if (isdir(path)) {
+    fprintf(stderr, "Error: %s is a directory (not copied).", path);
+    exit(EXIT_FAILURE);
+  }
   return fd;
 }
 
@@ -36,26 +49,22 @@ int openTarget(char *path, char *sourceFilename) {
     return fd;
   }
   if (errno == EEXIST) {
-    DIR *dir = opendir(path);
-    if (dir != NULL) {
-      closedir(dir);
+    if (isdir(path)) {
       // target is folder
       if (sourceFilename != NULL) {
         // append filename
         int pathLength = strlen(path);
         int filenameLength = strlen(sourceFilename);
-        int newPathLength = pathLength + filenameLength + 1;
-        bool appendSeperator = path[pathLength - 2] != '/';
-        if (appendSeperator) {
-          newPathLength++;
-        }
+        // +1 for \0, +1 for potential appended seperator
+        int newPathLength = pathLength + filenameLength + 2;
+        bool appendSeperator = path[pathLength - 1] != '/';
         char newPath[newPathLength];
         strncpy(newPath, path, pathLength);
         if (appendSeperator) {
           newPath[pathLength++] = '/';
         }
         strncpy(newPath + pathLength, sourceFilename, filenameLength);
-        newPath[newPathLength - 1] = '\0';
+        newPath[pathLength + filenameLength] = '\0';
         fd = openTarget(newPath, NULL);
         return fd;
       }
