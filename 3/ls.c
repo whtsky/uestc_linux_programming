@@ -6,7 +6,13 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/param.h>
+#include <sys/types.h>
+#include <pwd.h>
+#include <grp.h>
 #include <unistd.h>
+#include <time.h>
+
+struct stat buf;
 
 static struct {
   // argv[0]
@@ -74,6 +80,35 @@ void print_filetype(mode_t mode) {
   }
 }
 
+void print_file(char *path, struct dirent *dp) {
+  if (flags.follow_link) {
+    stat(path, &buf);
+  } else {
+    lstat(path, &buf);
+  }
+  print_filetype(buf.st_mode);
+  print_permissions(buf.st_mode);
+  putchar(' ');
+  printf("%d\t", buf.st_nlink);  
+  struct passwd *user = getpwuid(buf.st_uid);
+  if (user == NULL) {
+    perror("Error reading username");
+    exit(EXIT_FAILURE);
+  }
+  printf("%s\t", user->pw_name);
+  struct group *group = getgrgid(buf.st_gid);
+  if (group == NULL) {
+    perror("Error reading groupname");
+    exit(EXIT_FAILURE);
+  }
+  printf("%s\t%d\t", group->gr_name, buf.st_size);
+  char buffer[26];
+  struct tm* tm_info = localtime(&(buf.st_mtime));
+
+  strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+  printf("%s\t%s\n", buffer, dp->d_name);
+}
+
 void print_usage() {
   printf("%s: List directory contents.\n\n", flags.program_name);
   printf("%s [-AaLh] [directory]\n", flags.program_name);
@@ -97,6 +132,7 @@ int main(int argc, char **argv) {
 			break;
     case 'L':
       flags.follow_link = true;
+      break;
 		case 'h':
 		case '?':
     default:
@@ -104,21 +140,24 @@ int main(int argc, char **argv) {
 		}
 	}
   argc -= optind;
-	argv += optind;
-  int basepath_length;
-  char *path;
   if (argc > 1) {
-    // todo: add args support
-    basepath_length = strlen(argv[argc - 1]);
-    path = argv[argc - 1];
-  } else {
-    path = getcwd(NULL, 0);
-    if (!path) {
-      fprintf(stderr, "%s: can't get current dir.\n", argv[0]);
-      exit(EXIT_FAILURE);
-    }
+    print_usage();
   }
-  DIR *current_dir = opendir(path);
+	argv += optind;
+  char path[PATH_MAX];
+  if (argc == 1) {
+    // todo: add args support
+    strncpy(path, argv[1], strlen(argv[1]));
+  } else {
+    getcwd(path, PATH_MAX);
+  }
+  int basepath_length = strlen(path);  
+    if (path[basepath_length - 1] != '/') {
+    path[basepath_length++] = '/';
+  }
+  char *pathStart = path + basepath_length;
+
+  DIR *current_dir =opendir(path);
   if (current_dir == NULL) {
     fprintf(stderr, "Can't open %s.\n", path);
     exit(EXIT_FAILURE);
@@ -137,13 +176,12 @@ int main(int argc, char **argv) {
         }
       }
     }
-    // todo: loop, concat filepath
-    // print_file(dp);
+    // concat filepath
+    strncpy(pathStart, dp->d_name, dp->d_namlen);
+    print_file(path, dp);
     total++;
   }
-  printf("total %d\n", total);
-
   closedir(current_dir);
-  free(path);
+  printf("total %d\n", total);  
   return 0;
 }
