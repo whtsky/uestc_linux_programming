@@ -87,14 +87,10 @@ int openTarget(char *path, char *sourceFilename) {
   exit(EXIT_FAILURE);
 }
 
-int main(int argc, char *argv[]) {
-  if (argc != 3) {
-    fprintf(stderr, "Usage: %s <source> <target>", argv[0]);
-    exit(EXIT_FAILURE);
-  }
-  int sourceFd = openSource(argv[1]);
-  char *sourceFilename = getFilename(argv[1]);
-  int targetFd = openTarget(argv[2], sourceFilename);
+void cp(char *source, char *target) {
+  int sourceFd = openSource(source);
+  char *sourceFilename = getFilename(source);
+  int targetFd = openTarget(target, sourceFilename);
   char buffer[BUFFER_SIZE];
   size_t n = 0;
   do {
@@ -103,5 +99,4 @@ int main(int argc, char *argv[]) {
   } while (n == BUFFER_SIZE);
   close(sourceFd);
   close(targetFd);
-  return 0;
 }

@@ -1,0 +1,1 @@
+void cp(char *source, char *target);
