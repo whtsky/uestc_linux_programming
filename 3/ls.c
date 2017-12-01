@@ -176,6 +176,7 @@ int main(int argc, char **argv) {
     }
     // concat filepath
     strncpy(pathStart, dp->d_name, namelen);
+    *(pathStart + namelen) = '\0';
     print_file(path, dp);
     total++;
   }
