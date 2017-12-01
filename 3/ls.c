@@ -1,29 +1,29 @@
+#include <dirent.h>
+#include <grp.h>
+#include <pwd.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <dirent.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/param.h>
+#include <sys/stat.h>
 #include <sys/types.h>
-#include <pwd.h>
-#include <grp.h>
-#include <unistd.h>
 #include <time.h>
+#include <unistd.h>
 
 struct stat buf;
+char path[PATH_MAX];
 
 static struct {
   // argv[0]
   char *program_name;
-  /* 
+  /*
     -a
     Include directory entries whose names begin with a dot (.).
     -A
     List all entries except for . and ..
   */
-  bool seedot; // show all files, include hidding  
+  bool seedot;  // show all files, include hidding
   bool listdot; // show . and ..
   /*
     -L
@@ -35,12 +35,10 @@ static struct {
 
   */
 
-} flags = {
-  .program_name=NULL,
-  .seedot=false,
-  .listdot=false,
-  .follow_link=false
-};
+} flags = {.program_name = NULL,
+           .seedot = false,
+           .listdot = false,
+           .follow_link = false};
 
 void print_permissions(mode_t mode) {
   putchar((mode & S_IRUSR) ? 'r' : '-');
@@ -89,7 +87,7 @@ void print_file(char *path, struct dirent *dp) {
   print_filetype(buf.st_mode);
   print_permissions(buf.st_mode);
   putchar(' ');
-  printf("%d\t", buf.st_nlink);  
+  printf("%d\t", buf.st_nlink);
   struct passwd *user = getpwuid(buf.st_uid);
   if (user == NULL) {
     perror("Error reading username");
@@ -101,9 +99,9 @@ void print_file(char *path, struct dirent *dp) {
     perror("Error reading groupname");
     exit(EXIT_FAILURE);
   }
-  printf("%s\t%d\t", group->gr_name, buf.st_size);
+  printf("%s\t%lld\t", group->gr_name, buf.st_size);
   char buffer[26];
-  struct tm* tm_info = localtime(&(buf.st_mtime));
+  struct tm *tm_info = localtime(&(buf.st_mtime));
 
   strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
   printf("%s\t%s\n", buffer, dp->d_name);
@@ -114,7 +112,8 @@ void print_usage() {
   printf("%s [-AaLh] [directory]\n", flags.program_name);
   puts("\t -a: Include directory entries whose names begin with a dot (.)");
   puts("\t -A: List all entries except for . and ..");
-  puts("\t -L: Follow all symbolic links to final target and list the file or directory the link references rather than the link itself.");
+  puts("\t -L: Follow all symbolic links to final target and list the file or "
+       "directory the link references rather than the link itself.");
   puts("\t -h: Show this page");
   exit(EXIT_SUCCESS);
 }
@@ -122,51 +121,50 @@ void print_usage() {
 int main(int argc, char **argv) {
   flags.program_name = argv[0];
   char ch;
-   	while ((ch = getopt(argc, argv, "AaLh")) != -1) {
-		switch (ch) {
-		case 'a':
-			flags.listdot = true;
-			/* FALLTHROUGH */
-		case 'A':
-			flags.seedot = true;
-			break;
+  while ((ch = getopt(argc, argv, "AaLh")) != -1) {
+    switch (ch) {
+    case 'a':
+      flags.listdot = true;
+    /* FALLTHROUGH */
+    case 'A':
+      flags.seedot = true;
+      break;
     case 'L':
       flags.follow_link = true;
       break;
-		case 'h':
-		case '?':
+    case 'h':
+    case '?':
     default:
-			print_usage();
-		}
-	}
+      print_usage();
+    }
+  }
   argc -= optind;
-  if (argc > 1) {
+  if (argc > 2) {
     print_usage();
   }
-	argv += optind;
-  char path[PATH_MAX];
-  if (argc == 1) {
-    // todo: add args support
+  if (argc == 2) {
+    argv += optind;    
     strncpy(path, argv[1], strlen(argv[1]));
   } else {
     getcwd(path, PATH_MAX);
   }
-  int basepath_length = strlen(path);  
-    if (path[basepath_length - 1] != '/') {
+  int basepath_length = strlen(path);
+  if (path[basepath_length - 1] != '/') {
     path[basepath_length++] = '/';
   }
   char *pathStart = path + basepath_length;
 
-  DIR *current_dir =opendir(path);
+  DIR *current_dir = opendir(path);
   if (current_dir == NULL) {
     fprintf(stderr, "Can't open %s.\n", path);
     exit(EXIT_FAILURE);
   }
   struct dirent *dp;
   int total = 0;
-  char *filepath = malloc(MAXPATHLEN);  
+  char *filepath = malloc(MAXPATHLEN);
   while ((dp = readdir(current_dir)) != NULL) {
-    if (dp->d_namlen > 0 && dp->d_name[0] == '.') {
+    int namelen = strlen(dp->d_name);
+    if (namelen > 0 && dp->d_name[0] == '.') {
       if (!flags.seedot) {
         continue;
       }
@@ -177,11 +175,11 @@ int main(int argc, char **argv) {
       }
     }
     // concat filepath
-    strncpy(pathStart, dp->d_name, dp->d_namlen);
+    strncpy(pathStart, dp->d_name, namelen);
     print_file(path, dp);
     total++;
   }
   closedir(current_dir);
-  printf("total %d\n", total);  
+  printf("total %d\n", total);
   return 0;
 }
