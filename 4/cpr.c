@@ -9,6 +9,10 @@
 #include <time.h>
 #include <unistd.h>
 
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 #define DEFAULT_SOURCE_FOLDER "."
 #define DEFAULT_TARGET_FOLDER "/tmp/wuhaotian"
 
