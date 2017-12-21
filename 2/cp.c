@@ -53,10 +53,10 @@ int openTarget(char *path, char *sourceFilename) {
       // target is folder
       if (sourceFilename != NULL) {
         // append filename
-        int pathLength = strlen(path);
-        int filenameLength = strlen(sourceFilename);
+        size_t pathLength = strlen(path);
+        size_t filenameLength = strlen(sourceFilename);
         // +1 for \0, +1 for potential appended seperator
-        int newPathLength = pathLength + filenameLength + 2;
+        size_t newPathLength = pathLength + filenameLength + 2;
         bool appendSeperator = path[pathLength - 1] != '/';
         char newPath[newPathLength];
         strncpy(newPath, path, pathLength);
@@ -92,7 +92,7 @@ void cp(char *source, char *target) {
   char *sourceFilename = getFilename(source);
   int targetFd = openTarget(target, sourceFilename);
   char buffer[BUFFER_SIZE];
-  size_t n = 0;
+  ssize_t n = 0;
   do {
     n = read(sourceFd, buffer, BUFFER_SIZE);
     write(targetFd, buffer, BUFFER_SIZE);

@@ -124,7 +124,7 @@ void print_usage() {
 
 int main(int argc, char **argv) {
   flags.program_name = argv[0];
-  char ch;
+  int ch;
   while ((ch = getopt(argc, argv, "AaLh")) != -1) {
     switch (ch) {
     case 'a':
@@ -152,7 +152,7 @@ int main(int argc, char **argv) {
   } else {
     getcwd(path, PATH_MAX);
   }
-  int basepath_length = strlen(path);
+  size_t basepath_length = strlen(path);
   if (path[basepath_length - 1] != '/') {
     path[basepath_length++] = '/';
   }
@@ -167,7 +167,7 @@ int main(int argc, char **argv) {
   int total = 0;
   char *filepath = malloc(MAXPATHLEN);
   while ((dp = readdir(current_dir)) != NULL) {
-    int namelen = strlen(dp->d_name);
+    size_t namelen = strlen(dp->d_name);
     if (namelen > 0 && dp->d_name[0] == '.') {
       if (!flags.seedot) {
         continue;
