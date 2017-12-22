@@ -41,6 +41,7 @@ pid_node create_pid_node(void) {
 char *normalize_path(char *buf, char *source) {
   // copy path, append `/`, return char pointer for writing filename
   // todo: better naming
+  size_t basepath_length;
   if (source[0] != '/') {
     getcwd(buf, PATH_MAX);
     size_t baselen = strlen(buf);
@@ -48,11 +49,12 @@ char *normalize_path(char *buf, char *source) {
     if (buf[baselen - 1] != '/') {
       buf[baselen++] = '/';
     }
+    basepath_length = baselen + strlen(source);
     strcpy(buf + baselen, source);
   } else {
     strcpy(buf, source);
+    basepath_length = strlen(source);
   }
-  size_t basepath_length = strlen(buf);
   if (buf[basepath_length - 1] != '/') {
     buf[basepath_length++] = '/';
   }
@@ -61,7 +63,6 @@ char *normalize_path(char *buf, char *source) {
 }
 
 void pathcp(pathcp_params *params) {
-  printf("ls: %s -> %s", params->source, params->target);
   DIR *current_dir = opendir(params->source);
   if (current_dir == NULL) {
     fprintf(stderr, "Can't open %s.\n", params->source);
@@ -82,24 +83,29 @@ void pathcp(pathcp_params *params) {
     *(pathStart + namelen) = '\0';
 
     lstat(path, &buf);
+    puts("fullpath");
     puts(path);
     if (is_dir(buf.st_mode)) {
-      puts("dir");
       if (!recursion) {
         continue;
       }
       // concat path, run child pathcp
       pathcp_params child_param;
       normalize_path(child_param.source, path);
-      char *targetStart = normalize_path(child_param.target, params->target);
-      strncpy(targetStart,dp->d_name, namelen);
+      char *targetStart =   (child_param.target, params->target);
+      strncpy(targetStart, dp->d_name, namelen);
       *(targetStart + namelen) = '\0';
+      puts("isdir");
+      puts("source");
+      puts(child_param.source);
+      puts("target");
+      puts(child_param.target);
       pid_node child = create_pid_node();
       child->next = pid;
       pid = child;
       pthread_create(&child->pid, NULL, (void *(*)(void *)) pathcp, &child_param);
+      pthread_join(child->pid, NULL);
     } else {
-      puts("child");
       // run cp
       cp_params child_param;
       normalize_path(child_param.source, path);
@@ -111,15 +117,16 @@ void pathcp(pathcp_params *params) {
       child->next = pid;
       pid = child;
       pthread_create(&child->pid, NULL, (void *(*)(void *)) cp_thread, &child_param);
+      pthread_join(child->pid, NULL);
     }
   }
   closedir(current_dir);
 
   // wait all threads to complete
-  while (pid != NULL) {
-    pthread_join(pid->pid, NULL);
-    pid = pid->next;
-  }
+  // while (pid != NULL) {
+  //   pthread_join(pid->pid, NULL);
+  //   pid = pid->next;
+  // }
 }
 
 int main(int argc, char **argv) {

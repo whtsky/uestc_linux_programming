@@ -1,9 +1,7 @@
-cpr: cp.o cp_wrapper.o cpr.c
+cpr: cp_wrapper.o cpr.c cp.o
 	gcc -o cpr cp.o cp_wrapper.o cpr.c -lpthread
 
-cp.o: ../2/cp.c ../2/cp.h
-
-cp_wrapper.o: cp_wrapper.c cp_wrapper.h
+cp_wrapper.o: cp_wrapper.c cp_wrapper.h cp.h
 
 .PHONY : clean
 clean :

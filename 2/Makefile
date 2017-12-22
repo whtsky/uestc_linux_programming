@@ -1,5 +1,7 @@
-cp: cp.c cp.h main.c
-	gcc -o cp cp.c main.c
+cp: cp.o main.c
+	gcc -o cp cp.o main.c
+
+cp.o: cp.c cp.h
 
 .PHONY : clean
 clean :

@@ -6,37 +6,32 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <libgen.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #define BUFFER_SIZE 1024
 
 int CREATE_MODE = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 
-bool isdir(char *path) {
-  DIR *dir = opendir(path);
-  bool flag = dir != NULL;
-  if (flag) {
-    closedir(dir);
+bool isdir(int fd) {
+  struct stat buf;
+  if (fstat(fd, &buf) != 0) {
+    perror("fstat");
+    exit(EXIT_FAILURE);
   }
-  return flag;
-}
-
-char *getFilename(char *path) {
-  char *token = strtok(path, "/");
-  char *lastToken = NULL;
-  while (token) {
-    lastToken = token;
-    token = strtok(NULL, "/");
-  }
-  return lastToken;
+  return S_ISDIR(buf.st_mode);
 }
 
 int openSource(char *path) {
   int fd = open(path, O_RDONLY);
-  if (fd < 0) {
-    fprintf(stderr, "Error opening %s: %s", path, strerror(errno));
+  if (fd == -1) {
+    puts("openSource");
+    perror("Error opening");
+    fprintf(stderr, "Error opening %s: %s\n", path, strerror(errno));
     exit(EXIT_FAILURE);
   }
-  if (isdir(path)) {
+  if (isdir(fd)) {
     fprintf(stderr, "Error: %s is a directory (not copied).", path);
     exit(EXIT_FAILURE);
   }
@@ -45,11 +40,12 @@ int openSource(char *path) {
 
 int openTarget(char *path, char *sourceFilename) {
   int fd = open(path, O_CREAT | O_EXCL | O_WRONLY, CREATE_MODE);
-  if (fd >= 0) {
+  if (fd != -1) {
     return fd;
   }
   if (errno == EEXIST) {
-    if (isdir(path)) {
+    fd = open(path, O_RDONLY);
+    if (isdir(fd)) {
       // target is folder
       if (sourceFilename != NULL) {
         // append filename
@@ -65,31 +61,30 @@ int openTarget(char *path, char *sourceFilename) {
         }
         strncpy(newPath + pathLength, sourceFilename, filenameLength);
         newPath[pathLength + filenameLength] = '\0';
-        fd = openTarget(newPath, NULL);
-        return fd;
-      }
-    } else {
-      while (1) {
-        printf("%s already exist. Do you want to\n", path);
-        printf("[R]eplace [A]ppend: ");
-        char choice;
-        scanf(" %c", &choice);
-        if (choice == 'R' || choice == 'r') {
-          return open(path, O_WRONLY | O_TRUNC);
-        } else if (choice == 'A' || choice == 'a') {
-          return open(path, O_WRONLY | O_APPEND);
-        }
-        printf("Invalid input: %c\n", choice);
+        return openTarget(newPath, NULL);
       }
     }
+    while (1) {
+      printf("%s already exist. Do you want to\n", path);
+      printf("[R]eplace [A]ppend: ");
+      char choice;
+      scanf(" %c", &choice);
+      if (choice == 'R' || choice == 'r') {
+        return open(path, O_WRONLY | O_TRUNC);
+      } else if (choice == 'A' || choice == 'a') {
+        return open(path, O_WRONLY | O_APPEND);
+      }
+      printf("Invalid input: %c\n", choice);
+    }
   }
-  fprintf(stderr, "Error opening %s: %s", path, strerror(errno));
+  fprintf(stderr, "Error opening %s: %s\n", path, strerror(errno));
   exit(EXIT_FAILURE);
 }
 
 void cp(char *source, char *target) {
   int sourceFd = openSource(source);
-  char *sourceFilename = getFilename(source);
+  char *sourceDup = strdup(source);
+  char *sourceFilename = basename(source);
   int targetFd = openTarget(target, sourceFilename);
   char buffer[BUFFER_SIZE];
   ssize_t n = 0;
@@ -99,4 +94,5 @@ void cp(char *source, char *target) {
   } while (n == BUFFER_SIZE);
   close(sourceFd);
   close(targetFd);
+  free(sourceDup);
 }
