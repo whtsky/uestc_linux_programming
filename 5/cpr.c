@@ -38,8 +38,8 @@ pid_node create_pid_node(void) {
   return malloc(sizeof(struct pid_linked_list));
 }
 
-char *normalize_path(char *buf, char *source) {
-  // copy path, append `/`, return char pointer for writing filename
+char *normalize_path(char *buf, char *source, bool appendSeperator) {
+  // copy path, return char pointer for writing filename
   // todo: better naming
   size_t basepath_length;
   if (source[0] != '/') {
@@ -55,7 +55,7 @@ char *normalize_path(char *buf, char *source) {
     strcpy(buf, source);
     basepath_length = strlen(source);
   }
-  if (buf[basepath_length - 1] != '/') {
+  if (appendSeperator && buf[basepath_length - 1] != '/') {
     buf[basepath_length++] = '/';
   }
   buf[basepath_length] = '\0';
@@ -69,7 +69,7 @@ void pathcp(pathcp_params *params) {
     return;
   }
   char path[PATH_MAX];
-  char *pathStart = normalize_path(path, params->source);
+  char *pathStart = normalize_path(path, params->source, true);
   struct dirent *dp;
   struct stat buf;
   pid_node pid = NULL;
@@ -83,23 +83,16 @@ void pathcp(pathcp_params *params) {
     *(pathStart + namelen) = '\0';
 
     lstat(path, &buf);
-    puts("fullpath");
-    puts(path);
     if (is_dir(buf.st_mode)) {
       if (!recursion) {
         continue;
       }
       // concat path, run child pathcp
       pathcp_params child_param;
-      normalize_path(child_param.source, path);
-      char *targetStart =   (child_param.target, params->target);
+      normalize_path(child_param.source, path, true);
+      char *targetStart = normalize_path(child_param.target, params->target, true);
       strncpy(targetStart, dp->d_name, namelen);
       *(targetStart + namelen) = '\0';
-      puts("isdir");
-      puts("source");
-      puts(child_param.source);
-      puts("target");
-      puts(child_param.target);
       pid_node child = create_pid_node();
       child->next = pid;
       pid = child;
@@ -108,11 +101,11 @@ void pathcp(pathcp_params *params) {
     } else {
       // run cp
       cp_params child_param;
-      normalize_path(child_param.source, path);
+      normalize_path(child_param.source, path, false);
       /* my cp supports target as folder & auto concat filename
        * so no need to concat filename here
        */
-      normalize_path(child_param.target, params->target);
+      normalize_path(child_param.target, params->target, true);
       pid_node child = create_pid_node();
       child->next = pid;
       pid = child;
@@ -136,6 +129,7 @@ int main(int argc, char **argv) {
     switch (ch) {
     case 'r':
       recursion = true;
+      break;
     case 'h':
       /* FALLTHROUGH */
     default:
@@ -148,8 +142,8 @@ int main(int argc, char **argv) {
   }
   argv += optind;
   pathcp_params params;
-  normalize_path(params.source, argv[0]);
-  normalize_path(params.target, argv[1]);
+  normalize_path(params.source, argv[0], false);
+  normalize_path(params.target, argv[1], false);
   pthread_t tid;
   pthread_create(&tid, NULL, (void *(*)(void *)) pathcp, &params);
   pthread_join(tid, NULL);

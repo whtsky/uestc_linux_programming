@@ -7,12 +7,10 @@
 #include <string.h>
 #include <unistd.h>
 #include <libgen.h>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include "cp.h"
 
 #define BUFFER_SIZE 1024
-
-int CREATE_MODE = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 
 bool isdir(int fd) {
   struct stat buf;
@@ -26,8 +24,6 @@ bool isdir(int fd) {
 int openSource(char *path) {
   int fd = open(path, O_RDONLY);
   if (fd == -1) {
-    puts("openSource");
-    perror("Error opening");
     fprintf(stderr, "Error opening %s: %s\n", path, strerror(errno));
     exit(EXIT_FAILURE);
   }
