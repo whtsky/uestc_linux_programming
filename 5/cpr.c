@@ -110,16 +110,17 @@ void pathcp(pathcp_params *params) {
       child->next = pid;
       pid = child;
       pthread_create(&child->pid, NULL, (void *(*)(void *)) cp_thread, &child_param);
-      pthread_join(child->pid, NULL);
     }
   }
   closedir(current_dir);
 
   // wait all threads to complete
-  // while (pid != NULL) {
-  //   pthread_join(pid->pid, NULL);
-  //   pid = pid->next;
-  // }
+  while (pid != NULL) {
+    pthread_join(pid->pid, NULL);
+    pid_node next = pid->next;
+    free(pid);
+    pid = next;
+  }
 }
 
 int main(int argc, char **argv) {
