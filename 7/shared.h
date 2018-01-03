@@ -16,3 +16,4 @@ typedef struct {
 
 void producer(void);
 void consumer(int id);
+void run_terminator(void);

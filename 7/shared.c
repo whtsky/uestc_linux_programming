@@ -7,8 +7,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
-
-bool running;
+#include <pthread.h>
 
 key_t get_buf_key(void) {
   return ftok(".", BUF_PROJ_ID);
@@ -18,19 +17,46 @@ key_t get_sem_key(void) {
   return ftok(".", SEM_PROJ_ID);
 }
 
+void terminator(void) {
+  pthread_detach(pthread_self());
+  while (getchar() != 'q') {
+    ;
+  }
+  exit(EXIT_SUCCESS);
+}
+
+void run_terminator(void) {
+  pthread_t pid;
+  pthread_create(&pid, NULL, (void *(*)(void *)) terminator, NULL);
+}
 
 BufferPool *get_buffer_pool(void) {
-  int shmid = shmget(get_buf_key(), sizeof(BufferPool), IPC_CREAT | IPC_R | IPC_W | IPC_M);
+  bool init;
+  int shmid = shmget(get_buf_key(), sizeof(BufferPool), IPC_EXCL | IPC_CREAT | IPC_R | IPC_W | IPC_M);
   if (shmid == -1) {
-    perror("shmget");
-    exit(EXIT_FAILURE);
+    if (errno == EEXIST) {
+      shmid = shmget(get_buf_key(), sizeof(BufferPool),  IPC_CREAT | IPC_R | IPC_W | IPC_M);
+      printf("get shared memory %d\n", shmid);      
+      init = false;
+    } else {
+      perror("shmget");
+      exit(EXIT_FAILURE);
+    }
+  } else {
+    printf("created shared memory %d\n", shmid);
+    init = true;
   }
-  void *shm = shmat(shmid, 0, 0);
-  if (shm == (void *) -1) {
+  BufferPool *poll = shmat(shmid, 0, 0);
+  if (poll == (void *) -1) {
     perror("shm");
     exit(EXIT_FAILURE);
   }
-  return shm;
+  if (init == true) {
+    for (int i = 0; i < POLL_LENGTH; i++) {
+      poll->written[i] = false;
+    }
+  }
+  return poll;
 }
 
 int SEM_ID = -1;
@@ -105,6 +131,7 @@ void producer(void) {
   }
   BufferPool *poll = get_buffer_pool();
   while(true) {
+producer_loop:
     semaphore_p();
     for (int i = 0; i < POLL_LENGTH; i++) {
       if (poll->written[i] == false) {
@@ -114,9 +141,14 @@ void producer(void) {
          rewind(file);
         }
         fgets(poll->buffer[i], 99, file);
+        printf("Wrote to %d\n", i);
         poll->written[i] = true;
+        semaphore_v();
+        random_sleep();
+        goto producer_loop;
       }
     }
+    puts("No buffer available to write, sleep");
     semaphore_v();
     random_sleep();
   }
@@ -132,14 +164,16 @@ void consumer(int id) {
   }
   BufferPool *poll = get_buffer_pool();
   while (true) {
+consumer_loop:
     semaphore_p();
     for (int i = 0; i < POLL_LENGTH; i++) {
-      if (poll->written[i] == false) {
-        poll->written[i] = true;
+      if (poll->written[i] == true) {
         write(fd, poll->buffer[i], strlen(poll->buffer[i]));
         printf("found data: %s", poll->buffer[i]);
+        poll->written[i] = false;
         semaphore_v();
         random_sleep();
+        goto consumer_loop;
       }
     }
     puts("no data available, sleep");
