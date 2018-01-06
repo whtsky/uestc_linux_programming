@@ -42,6 +42,7 @@ int openTarget(char *path, char *sourceFilename) {
   if (errno == EEXIST) {
     fd = open(path, O_RDONLY);
     if (isdir(fd)) {
+appendpath:
       // target is folder
       if (sourceFilename != NULL) {
         // append filename
@@ -72,6 +73,9 @@ int openTarget(char *path, char *sourceFilename) {
       }
       printf("Invalid input: %c\n", choice);
     }
+  } else if (errno == EISDIR) {
+    mkdir(path, CREATE_MODE | S_IXUSR);
+    goto appendpath;
   }
   fprintf(stderr, "Error opening %s: %s\n", path, strerror(errno));
   exit(EXIT_FAILURE);
@@ -86,7 +90,7 @@ void cp(char *source, char *target) {
   ssize_t n = 0;
   do {
     n = read(sourceFd, buffer, BUFFER_SIZE);
-    write(targetFd, buffer, BUFFER_SIZE);
+    write(targetFd, buffer, n);
   } while (n == BUFFER_SIZE);
   close(sourceFd);
   close(targetFd);

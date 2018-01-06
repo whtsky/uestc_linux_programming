@@ -5,4 +5,4 @@ cp.o: cp.c cp.h
 
 .PHONY : clean
 clean :
-	rm cp
+	rm cp cp.o
