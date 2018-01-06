@@ -40,7 +40,7 @@ int main(void) {
     printf("3 Insert List\n");
     printf("4 Quit\n");
     puts("=======");
-    printf(">> ");    
+    printf(">> ");
     char command;
     scanf(" %c", &command);
     switch (command) {

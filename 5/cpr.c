@@ -1,13 +1,13 @@
 #include "cp_wrapper.h"
-#include <stdio.h>
-#include <stdbool.h>
 #include <dirent.h>
+#include <pthread.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <pthread.h>
 
 typedef struct {
   char source[PATH_MAX];
@@ -20,19 +20,18 @@ char *program_name;
 void print_usage(void) {
   printf("%s [-r] source target\n\n", program_name);
   printf("\t -r: If source_file designates a directory, %s copies the "
-           "directory and the entire subtree connected at that point.\n",
+         "directory and the entire subtree connected at that point.\n",
          program_name);
   puts("\t -h: Show this page");
   exit(EXIT_SUCCESS);
 }
 
-
 bool is_dir(mode_t mode) { return (mode & S_IFMT) == S_IFDIR; }
 
 typedef struct pid_linked_list {
-    pthread_t pid;
-    struct pid_linked_list *next;
-} *pid_node;
+  pthread_t pid;
+  struct pid_linked_list *next;
+} * pid_node;
 
 pid_node create_pid_node(void) {
   return malloc(sizeof(struct pid_linked_list));
@@ -90,13 +89,15 @@ void pathcp(pathcp_params *params) {
       // concat path, run child pathcp
       pathcp_params child_param;
       normalize_path(child_param.source, path, true);
-      char *targetStart = normalize_path(child_param.target, params->target, true);
+      char *targetStart =
+          normalize_path(child_param.target, params->target, true);
       strncpy(targetStart, dp->d_name, namelen);
       *(targetStart + namelen) = '\0';
       pid_node child = create_pid_node();
       child->next = pid;
       pid = child;
-      pthread_create(&child->pid, NULL, (void *(*)(void *)) pathcp, &child_param);
+      pthread_create(&child->pid, NULL, (void *(*)(void *))pathcp,
+                     &child_param);
       pthread_join(child->pid, NULL);
     } else {
       // run cp
@@ -109,7 +110,8 @@ void pathcp(pathcp_params *params) {
       pid_node child = create_pid_node();
       child->next = pid;
       pid = child;
-      pthread_create(&child->pid, NULL, (void *(*)(void *)) cp_thread, &child_param);
+      pthread_create(&child->pid, NULL, (void *(*)(void *))cp_thread,
+                     &child_param);
     }
   }
   closedir(current_dir);
@@ -146,7 +148,7 @@ int main(int argc, char **argv) {
   normalize_path(params.source, argv[0], false);
   normalize_path(params.target, argv[1], false);
   pthread_t tid;
-  pthread_create(&tid, NULL, (void *(*)(void *)) pathcp, &params);
+  pthread_create(&tid, NULL, (void *(*)(void *))pathcp, &params);
   pthread_join(tid, NULL);
   return 0;
 }

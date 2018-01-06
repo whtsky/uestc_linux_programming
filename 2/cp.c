@@ -1,14 +1,14 @@
+#include "cp.h"
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <libgen.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <libgen.h>
 #include <sys/stat.h>
-#include "cp.h"
+#include <unistd.h>
 
 #define BUFFER_SIZE 1024
 
@@ -42,7 +42,7 @@ int openTarget(char *path, char *sourceFilename) {
   if (errno == EEXIST) {
     fd = open(path, O_RDONLY);
     if (isdir(fd)) {
-appendpath:
+    appendpath:
       // target is folder
       if (sourceFilename != NULL) {
         // append filename

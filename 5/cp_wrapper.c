@@ -1,7 +1,7 @@
-#include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "cp.h"
 #include "cp_wrapper.h"
@@ -13,12 +13,12 @@ static void _mkdir(const char *dir) {
   char *p = NULL;
   size_t len;
 
-  snprintf(tmp, sizeof(tmp),"%s",dir);
+  snprintf(tmp, sizeof(tmp), "%s", dir);
   len = strlen(tmp);
-  if(tmp[len - 1] == '/')
+  if (tmp[len - 1] == '/')
     tmp[len - 1] = 0;
-  for(p = tmp + 1; *p; p++)
-    if(*p == '/') {
+  for (p = tmp + 1; *p; p++)
+    if (*p == '/') {
       *p = 0;
       mkdir(tmp, CREATE_DIR_MODE);
       *p = '/';

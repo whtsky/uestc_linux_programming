@@ -1,21 +1,17 @@
 #include "shared.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <sys/sem.h>
-#include <stdbool.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <pthread.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/sem.h>
+#include <unistd.h>
 
-key_t get_buf_key(void) {
-  return ftok(".", BUF_PROJ_ID);
-}
+key_t get_buf_key(void) { return ftok(".", BUF_PROJ_ID); }
 
-key_t get_sem_key(void) {
-  return ftok(".", SEM_PROJ_ID);
-}
+key_t get_sem_key(void) { return ftok(".", SEM_PROJ_ID); }
 
 void terminator(void) {
   pthread_detach(pthread_self());
@@ -27,16 +23,18 @@ void terminator(void) {
 
 void run_terminator(void) {
   pthread_t pid;
-  pthread_create(&pid, NULL, (void *(*)(void *)) terminator, NULL);
+  pthread_create(&pid, NULL, (void *(*)(void *))terminator, NULL);
 }
 
 BufferPool *get_buffer_pool(void) {
   bool init;
-  int shmid = shmget(get_buf_key(), sizeof(BufferPool), IPC_EXCL | IPC_CREAT | IPC_R | IPC_W | IPC_M);
+  int shmid = shmget(get_buf_key(), sizeof(BufferPool),
+                     IPC_EXCL | IPC_CREAT | IPC_R | IPC_W | IPC_M);
   if (shmid == -1) {
     if (errno == EEXIST) {
-      shmid = shmget(get_buf_key(), sizeof(BufferPool),  IPC_CREAT | IPC_R | IPC_W | IPC_M);
-      printf("get shared memory %d\n", shmid);      
+      shmid = shmget(get_buf_key(), sizeof(BufferPool),
+                     IPC_CREAT | IPC_R | IPC_W | IPC_M);
+      printf("get shared memory %d\n", shmid);
       init = false;
     } else {
       perror("shmget");
@@ -47,7 +45,7 @@ BufferPool *get_buffer_pool(void) {
     init = true;
   }
   BufferPool *poll = shmat(shmid, 0, 0);
-  if (poll == (void *) -1) {
+  if (poll == (void *)-1) {
     perror("shm");
     exit(EXIT_FAILURE);
   }
@@ -93,7 +91,6 @@ int get_semset(void) {
   return SEM_ID;
 }
 
-
 bool semaphore_v(void) {
   struct sembuf sem_b;
   sem_b.sem_num = 0;
@@ -130,15 +127,15 @@ void producer(void) {
     exit(EXIT_FAILURE);
   }
   BufferPool *poll = get_buffer_pool();
-  while(true) {
-producer_loop:
+  while (true) {
+  producer_loop:
     semaphore_p();
     for (int i = 0; i < POLL_LENGTH; i++) {
       if (poll->written[i] == false) {
         printf("Found available buf: %d\n", i);
         // available, write here
         if (feof(file)) {
-         rewind(file);
+          rewind(file);
         }
         fgets(poll->buffer[i], 99, file);
         printf("Wrote to %d\n", i);
@@ -164,7 +161,7 @@ void consumer(int id) {
   }
   BufferPool *poll = get_buffer_pool();
   while (true) {
-consumer_loop:
+  consumer_loop:
     semaphore_p();
     for (int i = 0; i < POLL_LENGTH; i++) {
       if (poll->written[i] == true) {

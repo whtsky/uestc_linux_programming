@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
     print_usage();
   }
   if (argc == 1) {
-    argv += optind;    
+    argv += optind;
     strncpy(path, argv[0], strlen(argv[0]));
   } else {
     getcwd(path, PATH_MAX);

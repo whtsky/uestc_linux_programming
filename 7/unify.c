@@ -1,9 +1,9 @@
 #include "shared.h"
+#include <pthread.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <pthread.h>
-#include <signal.h>
 
 pid_t child_pid = -1;
 
@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
   pthread_t pid;
-  pthread_create(&pid, NULL, (void *(*)(void *)) terminate_family, NULL);
+  pthread_create(&pid, NULL, (void *(*)(void *))terminate_family, NULL);
   if (fork() == 0) {
     consumer(atoi(argv[1]));
   } else {

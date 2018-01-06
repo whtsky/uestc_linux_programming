@@ -91,6 +91,6 @@ int main(int argc, char *argv[]) {
     wait(NULL);
   }
   closedir(current_dir);
-  
+
   return EXIT_SUCCESS;
 }
