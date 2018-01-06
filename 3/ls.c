@@ -143,12 +143,12 @@ int main(int argc, char **argv) {
     }
   }
   argc -= optind;
-  if (argc > 2) {
+  if (argc > 1) {
     print_usage();
   }
-  if (argc == 2) {
+  if (argc == 1) {
     argv += optind;    
-    strncpy(path, argv[1], strlen(argv[1]));
+    strncpy(path, argv[0], strlen(argv[0]));
   } else {
     getcwd(path, PATH_MAX);
   }
